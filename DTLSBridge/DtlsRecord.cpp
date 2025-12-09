@@ -5,6 +5,7 @@
 #include "DtlsRecord.h"
 
 #include <array>
+#include <iostream>
 
 //DTLSPlaintext parseDTLSRecord(const uint8_t* data, size_t length)
 //{
@@ -39,6 +40,34 @@
 //}
 
 
+
+bool parseDTLSRecords(const uint8_t* packet, size_t packetSize, std::vector<DTLSPlaintext>& records)
+{
+	if (packetSize < DTLSConstants::DTLS_HEADER_LEN)
+	{
+		std::cout << "Malformed packet: too small for a record\n";
+		return false;
+
+	}
+
+	size_t bytesRead = 0;
+	while (bytesRead < packetSize)
+	{
+		DTLSPlaintext record;
+		if (!parseDTLSPlaintext(packet + bytesRead, packetSize - bytesRead, record))
+		{
+			std::cout << "Malformed DTLS Record\n";
+			return false;
+		}
+		records.push_back(record);
+		bytesRead += DTLSConstants::DTLS_HEADER_LEN + record.length;
+	}
+
+	return true;
+}
+
+
+
 bool parseDTLSPlaintext(const uint8_t* data, size_t length, DTLSPlaintext& record) {
 	if (length < DTLSConstants::DTLS_HEADER_LEN) return false;
 
@@ -55,45 +84,97 @@ bool parseDTLSPlaintext(const uint8_t* data, size_t length, DTLSPlaintext& recor
 		(uint64_t)data[10];
 	record.length = (data[11] << 8) | data[12];
 
-	if (length < DTLSConstants::DTLS_HEADER_LEN + record.length) return false; // not enough data
+	if (length < DTLSConstants::DTLS_HEADER_LEN + record.length) return false; // not enough data in packet
 
 	record.fragment = std::vector<uint8_t>(data + DTLSConstants::DTLS_HEADER_LEN, data + DTLSConstants::DTLS_HEADER_LEN + record.length);
 	return true;
 }
 
-bool isDTLSRecord(std::vector<uint8_t>& packet)
+bool isValidDTLSRecord(uint8_t* packet, size_t packetLength)
 {
+	if (packetLength < DTLSConstants::DTLS_HEADER_LEN)
+	{
+		std::cout << "packet is smaller than record header\n";
+		return false;
+	}
 	static constexpr std::array<uint8_t, 4> contentTypes = {
 		static_cast<uint8_t>(ContentType::change_cipher_spec),
 		static_cast<uint8_t>(ContentType::alert),
 		static_cast<uint8_t>(ContentType::handshake),
 		static_cast<uint8_t>(ContentType::application_data)
 	};
-
 	if (std::find(contentTypes.begin(), contentTypes.end(), packet[0]) == contentTypes.end()) {
 		return false;
 	}
 
-	if (packet[1] != 0xFE || packet[2] != 0xFD) { return false; }
+	if ((packet[1] != 0xFE && packet[2] != 0xFF) || packet[1] != 0xFE && packet[2] != 0xFD) { return false; }
 	//3 and 4 are epoch
 	//5-10 are sequence number
 
 	const uint16_t length = static_cast<uint16_t>(packet[11]) << 8 | static_cast<uint16_t>(packet[12]);
 
-	if (length + DTLSConstants::DTLS_HEADER_LEN != packet.size()) {
+	if (length + DTLSConstants::DTLS_HEADER_LEN != packetLength) {
+		return false;
+	}
+	return true;
+}
+
+bool consistsOfDTLSRecords(uint8_t* packet, size_t packetLength)
+{
+	if (packetLength < DTLSConstants::DTLS_HEADER_LEN)
+	{
+		std::cout << "packet is smaller than record header\n";
+		return false;
+	}
+
+
+	size_t bytesRead = 0;
+	uint8_t* readingPosition = packet;
+
+	while (packetLength > bytesRead)
+	{
+		const uint16_t length = static_cast<uint16_t>(readingPosition[11]) << 8 | static_cast<uint16_t>(readingPosition[12]);
+
+		if (!isValidDTLSRecord(readingPosition, length + DTLSConstants::DTLS_HEADER_LEN))
+		{
+			std::cout << "Malformed DTLS Record\n";
+			return false;
+		}
+
+		bytesRead += length + DTLSConstants::DTLS_HEADER_LEN;
+		readingPosition += length + DTLSConstants::DTLS_HEADER_LEN;
+	}
+
+	if (bytesRead != packetLength)
+	{
+		std::cout << "Bytes read does not equal sum of dtls record's lengths\n";
 		return false;
 	}
 
 	return true;
 }
 
-bool isClientHello(DTLSPlaintext& record)
+bool isClientHello(const DTLSPlaintext& record)
 {
-	if (record.type != ContentType::handshake)
+	if (record.type != handshake)
+	{
 		return false;
+	}
 
-	if (record.length < 1)
-		return false;
+	HandshakeMessage handshake;
+	auto handshakeFragment = record.fragment;
+	handshake.msg_type = static_cast<HandshakeType>(handshakeFragment[0]);
+	handshake.length = (static_cast<uint32_t>(handshakeFragment[1]) << 16) |
+		(static_cast<uint32_t>(handshakeFragment[2]) << 8) |
+		static_cast<uint32_t>(handshakeFragment[3]);
+	handshake.message_seq = (static_cast<uint16_t>(handshakeFragment[4]) << 8) | static_cast<uint16_t>(handshakeFragment[5]);
+	handshake.fragment_offset = (static_cast<uint32_t>(handshakeFragment[6]) << 16) |
+		(static_cast<uint32_t>(handshakeFragment[7]) << 8) |
+		static_cast<uint32_t>(handshakeFragment[8]);
+	handshake.fragment_length = (static_cast<uint32_t>(handshakeFragment[9]) << 16) |
+		(static_cast<uint32_t>(handshakeFragment[10]) << 8) |
+		static_cast<uint32_t>(handshakeFragment[11]);
 
-	return record.fragment[0] == 1; // 1 = ClientHello
+
+	return handshake.msg_type == HandshakeType::client_hello;
 }

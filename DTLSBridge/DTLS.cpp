@@ -65,6 +65,10 @@ struct DTLSClient
 
 void init()
 {
+	SSL_library_init();
+	SSL_load_error_strings();
+	OpenSSL_add_ssl_algorithms();
+
 	SSL_CTX* ctx = SSL_CTX_new(DTLS_server_method());
 	SSL_CTX_set_cookie_generate_cb(ctx, generateCookie);
 	SSL_CTX_set_cookie_verify_cb(ctx, verifyCookie);
@@ -139,104 +143,65 @@ void getPendingData(BIO* writeBio, uint8_t* target, size_t* pendingBytesWritten)
 	*pendingBytesWritten = bytesRead;
 }
 
-
-
-void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, uint8_t* decrpytedDataBuffer, size_t* decryptedDataLength, const char* endpoint)
+void handleNewClient(const uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, const char* endpoint)
 {
-	SSL_library_init();
-	SSL_load_error_strings();
-	OpenSSL_add_ssl_algorithms();
+	std::cout << "endpoint not found, checking for cookie" << "\n";
+	SSL* ssl = SSL_new(Globals::ctx);
 
-	std::cout << "ReadData() input data length: " << inputDataLength << "\n";
-	//for (int i = 0; i < inputDataLength; i++)
-//{
-//	std::cout << std::hex << (int)inputData[i] << " ";
-//}
+	BIO* rMemBio = BIO_new(BIO_s_mem());
+	BIO* wMemBio = BIO_new(BIO_s_mem());
 
+	SSL_set_bio(ssl, rMemBio, wMemBio);
+	SSL_set_accept_state(ssl);
 
-	if (inputDataLength <= 0)
+	int bioWritten = BIO_write(rMemBio, inputData, inputDataLength);
+	std::cout << "handleNewClient() bytes written to read bio: " << bioWritten << "\n";
+
+	BIO_ADDR* peer = BIO_ADDR_new();
+	int listenRet = DTLSv1_listen(ssl, peer);
+	BIO_ADDR_free(peer);
+
+	if (listenRet < 1)
 	{
-		std::cout << "ReadData() input data length is zero or negative" << "\n";
-		*decryptedDataLength = 0;
-		return;
-	}
+		std::cout << "DTLSv1_listen returned < 1" << "\n";
 
-	std::vector<uint8_t> input(inputData, inputData + inputDataLength);
-	if (!isDTLSRecord(input))
-	{
-		xorFilter::xorData(reinterpret_cast<char*>(inputData), inputDataLength, 0x1BC257E12C598C63);
-	}
-
-	isDTLSRecord(input);
-
-	auto client = clients.find(std::string{ endpoint });
-	if (client == clients.end())
-	{
-		std::cout << "ReadData() endpoint not found, checking for cookie" << "\n";
-
-		*decryptedDataLength = 0;
-
-		SSL* ssl = SSL_new(Globals::ctx);
-
-		BIO* rMemBio = BIO_new(BIO_s_mem());
-		BIO* wMemBio = BIO_new(BIO_s_mem());
-
-		SSL_set_bio(ssl, rMemBio, wMemBio);
-		SSL_set_accept_state(ssl);
-
-		int bioWritten = BIO_write(rMemBio, inputData, inputDataLength);
-		std::cout << "ReadData() bytes written to read bio: " << bioWritten << "\n";
-
-		BIO_ADDR* peer = BIO_ADDR_new();
-		int listenRet = DTLSv1_listen(ssl, peer);
-		BIO_ADDR_free(peer);
-
-		if (listenRet < 1)
+		if (listenRet < 0)
 		{
-			std::cout << "DTLSv1_listen returned < 1" << "\n";
-
-			if (listenRet < 0)
-			{
-				std::cout << "Fatal Error in DTLSv1_listen" << "\n";
-				printError(ssl, listenRet);
-				return;
-			}
-
-			std::cout << "DTLSv1_listen returned HelloVerifyRequest" << "\n";
-			getPendingData(wMemBio, pendingSendBuffer, pendingSendLength);
-
-			SSL_free(ssl);
+			std::cout << "Fatal Error in DTLSv1_listen" << "\n";
+			printError(ssl, listenRet);
 			return;
 		}
 
-		std::cout << "DTLSv1_listen succeeded, cookie verified" << "\n";
-		auto it = clients.emplace(std::string{ endpoint }, DTLSClient{ ssl, rMemBio, wMemBio, true });
-		DTLSClient& dtlsClient = it.first->second;
-
-		bool isHandshakeFinished = SSL_is_init_finished(dtlsClient.ssl);
-
-		if (!isHandshakeFinished)
-		{
-			int result = SSL_do_handshake(dtlsClient.ssl);
-
-			std::cout << "do_handshake_result: " << result << "\n";
-
-			if (result < 1)
-			{
-				printError(dtlsClient.ssl, result);
-			}
-
-		}
-		else
-		{
-			std::cout << "Handshake already finished after DTLSv1_listen should not happen" << "\n";
-		}
-
-		getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
+		std::cout << "DTLSv1_listen returned HelloVerifyRequest" << "\n";
+		getPendingData(wMemBio, pendingSendBuffer, pendingSendLength);
+		SSL_free(ssl);
 		return;
 	}
 
-	DTLSClient& dtlsClient = client->second;
+	std::cout << "DTLSv1_listen succeeded, cookie verified" << "\n";
+	auto it = clients.emplace(std::string{ endpoint }, DTLSClient{ ssl, rMemBio, wMemBio, true });
+	DTLSClient& dtlsClient = it.first->second;
+
+	bool isHandshakeFinished = SSL_is_init_finished(dtlsClient.ssl);
+
+	if (!isHandshakeFinished)
+	{
+		int result = SSL_do_handshake(dtlsClient.ssl);
+		std::cout << "do_handshake_result: " << result << "\n";
+		if (result < 1)
+		{
+			printError(dtlsClient.ssl, result);
+		}
+	}
+	else
+	{
+		std::cout << "Handshake already finished after DTLSv1_listen should not happen" << "\n";
+	}
+	getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
+
+}
+
+void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size_t inputDataLength, uint8_t* decryptedDataBuffer, size_t* decryptedDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, const char* endpoint) {
 
 	int bioWritten = BIO_write(dtlsClient.rMemBio, inputData, inputDataLength);
 	std::cout << "ReadData() bytes written to read bio: " << bioWritten << "\n";
@@ -246,19 +211,17 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 	if (!isHandshakeFinished)
 	{
 		int result = SSL_do_handshake(dtlsClient.ssl);
-
 		std::cout << "do_handshake_result: " << result << "\n";
-
 		if (result < 1)
 		{
 			printError(dtlsClient.ssl, result);
 		}
-
 	}
 
 	if (isHandshakeFinished)
 	{
 		std::cout << "ReadData() handshake finished" << "\n";
+
 		uint8_t decryptedData[4096];
 		int bytesRead = SSL_read(dtlsClient.ssl, decryptedData, sizeof(decryptedData));
 
@@ -271,13 +234,13 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 				std::cout << std::hex << (int)decryptedData[i] << " ";
 			}
 			std::cout << "\n";
-			std::memcpy(decrpytedDataBuffer, decryptedData, bytesRead);
+			std::memcpy(decryptedDataBuffer, decryptedData, bytesRead);
 			*decryptedDataLength = bytesRead;
 			getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
 			return;
 		}
 		std::cout << "ssl_read bytesRead <= 0" << "\n";
-		printError(dtlsClient.ssl, bytesRead);
+		printError(dtlsClient.ssl, bytesRead); 
 
 		std::cout << "checking for close notify" << "\n";
 		const int shutdownMask = SSL_get_shutdown(dtlsClient.ssl);
@@ -287,69 +250,73 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 		if (receivedCloseNotify) {
 			std::cout << "DTLS received close-notify. Deleting client\n";
 			getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
-
+			SSL_free(dtlsClient.ssl);
 			clients.erase({ endpoint });
 			return;
 		}
 
-	//	DTLSPlaintext record;
-	//	if (!parseDTLSPlaintext(inputData, inputDataLength, record))
-	//	{
-	//		std::cout << "Failed to parse DTLSPlaintext record" << "\n";
-	//		return;
-	//	}
+		getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
 
-	//	switch (record.type)
-	//	{
-	//	case handshake:
-	//	{
+		std::vector<DTLSPlaintext> records;
+		if (!parseDTLSRecords(inputData, inputDataLength, records))
+		{
+			std::cout << "Failed to parse DTLSPlaintext record" << "\n";
+			*decryptedDataLength = 0;
+			*pendingSendLength = 0;
+			return;
+		}
 
-	//	}
-	//	case application_data:
-	//	{
+		for (const auto& record : records)
+		{
+			if (isClientHello(record))
+			{
+				std::cout << "Received a client Hello with existing SSL Session, deleting Session, sending hello verify request\n";
+				clients.erase({ endpoint });
+				return handleNewClient(inputData, inputDataLength, pendingSendBuffer, pendingSendLength, endpoint);
+			}
+		}
+	}
+}
 
-	//	}
-	//	default:
-	//	{
+void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, uint8_t* decrpytedDataBuffer, size_t* decryptedDataLength, const char* endpoint)
+{
+	std::cout << "ReadData() input data length: " << inputDataLength << "\n";
 
-	//		std::cout << "Received DTLS record of unhandled type: " << static_cast<int>(record.type) << "\n";
-	//		return;
-	//	}
-
-	//	}
-
-	//	if (record.type == application_data)
-	//	{
-	//		std::cout << "ReadData() received application data DTLS record" << "\n";
-	//	}
-	//	else
-	//	{
-	//		std::cout << "Parsed DTLS record details:" << "\n";
-	//		std::cout << "record.type: " << static_cast<int>(record.type) << "\n";
-	//		std::cout << "record.length: " << record.length << "\n";
-	//		std::cout << "record.fragment size: " << record.fragment.size() << "\n";
-	//		std::cout << "\n";
-
-	//		std::cout << "ReadData() received non-application data DTLS record of type: " << record.type << "\n";
-	//		if (isClientHello(record))
-	//		{
-	//			std::cout << "ReadData() received ClientHello message" << "\n";
-	//		}
-	//	}
-	//}
-	//else
-	//{
-	//	std::cout << "ReadData() failed to parse DTLS record" << "\n";
-	//}
-
+	if (inputDataLength <= 0)
+	{
+		std::cout << "ReadData() input data length is zero or negative" << "\n";
+		*decryptedDataLength = 0;
+		*pendingSendLength = 0;
+		return;
 	}
 
+	if (!consistsOfDTLSRecords(inputData, inputDataLength))
+	{
+		xorFilter::xorData(reinterpret_cast<char*>(inputData), inputDataLength, 0x1BC257E12C598C63);
+		if (!consistsOfDTLSRecords(inputData, inputDataLength))
+		{
+			std::cout << "ReadData() Warning: packet is not a DTLS Record after xoring" << "\n";
+			*decryptedDataLength = 0;
+			*pendingSendLength = 0;
+			return;
+		}
+	}
 
-	getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
+	auto client = clients.find(std::string{ endpoint });
 
+	if (client == clients.end())
+	{
+		handleNewClient(inputData, inputDataLength, pendingSendBuffer, pendingSendLength, endpoint);
+		*decryptedDataLength = 0;
+		return;
+	}
 
-	//if clienthello 
+	DTLSClient& dtlsClient = client->second;
+
+	handleExistingClient(dtlsClient, inputData, inputDataLength, decrpytedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
+
 }
+
 
 void WriteData(uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, size_t* encryptedDataLength, const char* endpoint)
 {
@@ -363,10 +330,7 @@ void WriteData(uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, s
 
 	DTLSClient& dtlsClient = it->second;
 
-
 	int bytesWritten = SSL_write(dtlsClient.ssl, rawData, rawDataLength);
-
-
 	if (bytesWritten <= 0)
 	{
 		std::cout << "WriteData() error in SSL_write: " << bytesWritten << "\n";
@@ -374,7 +338,6 @@ void WriteData(uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, s
 		//return;
 	}
 	std::cout << "bytes written in ssl_write: " << bytesWritten << "\n";
-
 
 	int pending = BIO_pending(dtlsClient.wMemBio);
 

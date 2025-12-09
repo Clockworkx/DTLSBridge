@@ -1,6 +1,11 @@
 #pragma once
 #include <cstdint>
 
+namespace DTLSConstants
+{
+	constexpr size_t DTLS_HEADER_LEN = 13;
+}
+
 struct ProtocolVersion {
 	uint8_t major;
 	uint8_t minor;
@@ -48,12 +53,6 @@ struct HandshakeMessage {
 };
 
 bool parseDTLSPlaintext(const uint8_t* data, size_t length, DTLSPlaintext& record);
-
-bool isClientHello(DTLSPlaintext& record);
-bool isDTLSRecord(std::vector<uint8_t>& packet);
-
-
-namespace DTLSConstants
-{
-	constexpr size_t DTLS_HEADER_LEN = 13;
-}
+bool isClientHello(const DTLSPlaintext& record);
+bool consistsOfDTLSRecords(uint8_t* packet, size_t packetLength);
+bool parseDTLSRecords(const uint8_t* packet, size_t packetSize, std::vector<DTLSPlaintext>& records);
