@@ -216,6 +216,7 @@ void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size
 		{
 			printError(dtlsClient.ssl, result);
 		}
+		getPendingData(dtlsClient.wMemBio, pendingSendBuffer, pendingSendLength);
 	}
 
 	if (isHandshakeFinished)
