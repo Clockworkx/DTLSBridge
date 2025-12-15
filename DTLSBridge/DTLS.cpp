@@ -137,7 +137,7 @@ void getPendingData(BIO* writeBio, uint8_t* target, size_t* pendingBytesWritten)
 		std::cout << std::hex << (int)pendingData[i] << " ";
 	}
 
-	xorFilter::xorData(reinterpret_cast<char*>(pendingData), pendingSize, 0x1BC257E12C598C63);
+	xorFilter::xorData(reinterpret_cast<char*>(pendingData), pendingSize, NRS_XOR_MAGIC);
 
 	std::memcpy(target, pendingData, bytesRead);
 	*pendingBytesWritten = bytesRead;
@@ -293,7 +293,7 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 
 	if (!consistsOfDTLSRecords(inputData, inputDataLength))
 	{
-		xorFilter::xorData(reinterpret_cast<char*>(inputData), inputDataLength, 0x1BC257E12C598C63);
+		xorFilter::xorData(reinterpret_cast<char*>(inputData), inputDataLength, NRS_XOR_MAGIC);
 		if (!consistsOfDTLSRecords(inputData, inputDataLength))
 		{
 			std::cout << "ReadData() Warning: packet is not a DTLS Record after xoring" << "\n";
@@ -355,7 +355,7 @@ void WriteData(uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, s
 
 	std::cout << "bytes read from write bio: " << bytesRead << "\n";
 
-	xorFilter::xorData(reinterpret_cast<char*>(encryptedDataBuffer), bytesRead, 0x1BC257E12C598C63);
+	xorFilter::xorData(reinterpret_cast<char*>(encryptedDataBuffer), bytesRead, NRS_XOR_MAGIC);
 	std::memcpy(encryptedData, encryptedDataBuffer, pending);
 	*encryptedDataLength = pending;
 }
