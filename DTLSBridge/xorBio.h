@@ -2,6 +2,8 @@
 
 #include <openssl/bio.h>
 
+inline constexpr const uint64_t NRS_XOR_MAGIC = 0x1BC257E12C598C63;
+
 namespace xorFilter
 {
     int xorFilterWrite(BIO* b, const char* data, int dlen);

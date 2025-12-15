@@ -23,7 +23,7 @@ void xorFilter::xorData(char* data, size_t length, uint64_t key)
 int xorFilter::xorFilterWrite(BIO* b, const char* data, int dlen)
 {
 	std::cout << "xorFilterWrite called with data length: " << dlen << "\n";
-	xorData(const_cast<char*>(data), dlen, 0x1BC257E12C598C63);
+	xorData(const_cast<char*>(data), dlen, NRS_XOR_MAGIC);
 	return BIO_write(BIO_next(b), data, dlen);
 }
 
@@ -38,7 +38,7 @@ int xorFilter::xorFilterRead(BIO* b, char* data, int dlen)
 	}
 	std::cout << "xorFilterRead called with data length: " << bytesReceived << "\n";
 
-	xorData(data, bytesReceived, 0x1BC257E12C598C63);
+	xorData(data, bytesReceived, NRS_XOR_MAGIC);
 	return bytesReceived;
 }
 
