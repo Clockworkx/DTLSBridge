@@ -279,7 +279,7 @@ void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size
 	}
 }
 
-void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, uint8_t* decrpytedDataBuffer, size_t* decryptedDataLength, const char* endpoint)
+void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, uint8_t* decryptedDataBuffer, size_t* decryptedDataLength, const char* endpoint)
 {
 	std::cout << "ReadData() input data length: " << inputDataLength << "\n";
 
@@ -314,7 +314,7 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 
 	DTLSClient& dtlsClient = client->second;
 
-	handleExistingClient(dtlsClient, inputData, inputDataLength, decrpytedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
+	handleExistingClient(dtlsClient, inputData, inputDataLength, decryptedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
 
 }
 
