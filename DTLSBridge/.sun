@@ -2,5 +2,12 @@
 dynamic
 arg -DDTLSBRIDGE_EXPORTS
 arg -Ilibs/openssl/include
-linker_arg -llibs/openssl/libcrypto.lib
-linker_arg -llibs/openssl/libssl.lib
+if windows
+	linker_arg -llibs/openssl/libcrypto.lib
+	linker_arg -llibs/openssl/libssl.lib
+endif
+if not windows
+	# apt install libssl-dev
+	linker_arg -lcrypto
+	linker_arg -lssl
+endif

@@ -1,12 +1,16 @@
 #pragma once
 
-#include "pch.h"
-
+#include <cstdint>
+#include <cstddef>
 
 #ifdef DTLSBRIDGE_EXPORTS
-#define  DTLSBRIDGE_API __declspec(dllexport)
+	#ifdef _WIN32
+		#define DTLSBRIDGE_API __declspec(dllexport)
+	#else
+		#define DTLSBRIDGE_API __attribute__((visibility("default")))
+	#endif
 #else
-#define DTLSBRIDGE_API __declspec(dllimport)
+	#define DTLSBRIDGE_API __declspec(dllimport)
 #endif
 
 extern "C" {

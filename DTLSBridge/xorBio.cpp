@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "xorBio.h"
 
 #include <iostream>

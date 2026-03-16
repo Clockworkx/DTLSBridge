@@ -1,23 +1,17 @@
-#include "pch.h"
-
-#include <iostream>
 #include "DTLS.h"
 
+#include <cstring>
+#include <iostream>
 #include <unordered_map>
 #include <vector>
-#include <openssl/ssl.h>
 
-#include "xorBio.h"
+#include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
 
 #include "DtlsRecord.h"
-
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-
 #include "Globals.h"
-
+#include "xorBio.h"
 
 int generateCookie(SSL* ssl, unsigned char* cookie, unsigned int* cookie_len)
 {
