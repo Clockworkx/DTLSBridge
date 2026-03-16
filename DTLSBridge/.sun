@@ -1,0 +1,6 @@
++*.cpp
+dynamic
+arg -DDTLSBRIDGE_EXPORTS
+arg -Ilibs/openssl/include
+linker_arg -llibs/openssl/libcrypto.lib
+linker_arg -llibs/openssl/libssl.lib
