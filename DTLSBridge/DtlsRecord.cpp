@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#ifdef LOGGING
 #include <iostream>
+#endif
 #include <vector>
 
 //DTLSPlaintext parseDTLSRecord(const uint8_t* data, size_t length)
@@ -43,7 +45,9 @@ bool parseDTLSRecords(const uint8_t* packet, size_t packetSize, std::vector<DTLS
 {
 	if (packetSize < DTLSConstants::DTLS_HEADER_LEN)
 	{
+#ifdef LOGGING
 		std::cout << "Malformed packet: too small for a record\n";
+#endif
 		return false;
 
 	}
@@ -54,7 +58,9 @@ bool parseDTLSRecords(const uint8_t* packet, size_t packetSize, std::vector<DTLS
 		DTLSPlaintext record;
 		if (!parseDTLSPlaintext(packet + bytesRead, packetSize - bytesRead, record))
 		{
+#ifdef LOGGING
 			std::cout << "Malformed DTLS Record\n";
+#endif
 			return false;
 		}
 		records.push_back(record);
@@ -92,7 +98,9 @@ bool isValidDTLSRecord(uint8_t* packet, size_t packetLength)
 {
 	if (packetLength < DTLSConstants::DTLS_HEADER_LEN)
 	{
+#ifdef LOGGING
 		std::cout << "packet is smaller than record header\n";
+#endif
 		return false;
 	}
 	static constexpr std::array<uint8_t, 4> contentTypes = {
@@ -121,7 +129,9 @@ bool consistsOfDTLSRecords(uint8_t* packet, size_t packetLength)
 {
 	if (packetLength < DTLSConstants::DTLS_HEADER_LEN)
 	{
+#ifdef LOGGING
 		std::cout << "packet is smaller than record header\n";
+#endif
 		return false;
 	}
 
@@ -135,7 +145,9 @@ bool consistsOfDTLSRecords(uint8_t* packet, size_t packetLength)
 
 		if (!isValidDTLSRecord(readingPosition, length + DTLSConstants::DTLS_HEADER_LEN))
 		{
+#ifdef LOGGING
 			std::cout << "Malformed DTLS Record\n";
+#endif
 			return false;
 		}
 
@@ -145,7 +157,9 @@ bool consistsOfDTLSRecords(uint8_t* packet, size_t packetLength)
 
 	if (bytesRead != packetLength)
 	{
+#ifdef LOGGING
 		std::cout << "Bytes read does not equal sum of dtls record's lengths\n";
+#endif
 		return false;
 	}
 
