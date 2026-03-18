@@ -360,7 +360,7 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 }
 
 
-void WriteData(uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, size_t* encryptedDataLength, const char* endpoint)
+void WriteData(const uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, size_t* encryptedDataLength, const char* endpoint)
 {
 
 	auto it = clients.find(std::string{ endpoint });
