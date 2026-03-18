@@ -314,7 +314,7 @@ void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size
 	}
 }
 
-void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, uint8_t decryptedDataBuffer[4096], size_t* decryptedDataLength, const char* endpoint)
+bool ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, uint8_t decryptedDataBuffer[4096], size_t* decryptedDataLength, const char* endpoint)
 {
 #ifdef LOGGING
 	std::cout << "ReadData() input data length: " << inputDataLength << "\n";
@@ -327,7 +327,7 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 #endif
 		*decryptedDataLength = 0;
 		*pendingSendLength = 0;
-		return;
+		return false;
 	}
 
 	if (!consistsOfDTLSRecords(inputData, inputDataLength))
@@ -340,7 +340,7 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 #endif
 			*decryptedDataLength = 0;
 			*pendingSendLength = 0;
-			return;
+			return false;
 		}
 	}
 
@@ -350,13 +350,13 @@ void ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 	{
 		handleNewClient(inputData, inputDataLength, pendingSendBuffer, pendingSendLength, endpoint);
 		*decryptedDataLength = 0;
-		return;
+		return true;
 	}
 
 	DTLSClient& dtlsClient = client->second;
 
 	handleExistingClient(dtlsClient, inputData, inputDataLength, decryptedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
-
+	return true;
 }
 
 
