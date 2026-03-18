@@ -138,7 +138,7 @@ void getPendingData(BIO* writeBio, uint8_t* target, size_t* pendingBytesWritten)
 	std::cout << "ReadData() bytes read from write bio:" << bytesRead << "\n";
 	for (int i = 0; i < bytesRead; i++)
 	{
-		std::cout << std::hex << (int)pendingData[i] << " ";
+		std::cout << std::hex << (int)target[i] << " ";
 	}
 #endif
 
@@ -260,7 +260,7 @@ void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size
 #ifdef LOGGING
 			for (int i = 0; i < bytesRead; i++)
 			{
-				std::cout << std::hex << (int)decryptedData[i] << " ";
+				std::cout << std::hex << (int)decryptedDataBuffer[i] << " ";
 			}
 			std::cout << "\n";
 #endif
