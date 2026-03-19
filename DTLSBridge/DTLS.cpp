@@ -116,7 +116,7 @@ void printError(SSL* ssl, int result)
 }
 #endif
 
-void getPendingData(BIO* writeBio, uint8_t* target, size_t* pendingBytesWritten)
+void getPendingData(BIO* writeBio, uint8_t target[4096], size_t* pendingBytesWritten)
 {
 	int pendingSize = BIO_pending(writeBio);
 #ifdef LOGGING
@@ -130,6 +130,15 @@ void getPendingData(BIO* writeBio, uint8_t* target, size_t* pendingBytesWritten)
 #endif
 		*pendingBytesWritten = 0;
 		return;
+	}
+
+	if (pendingSize > 4096)
+	{
+#ifdef LOGGING
+		std::cout << "Trimming pending write data to buffer size: " << pendingSize << " -> " << 4096 << "\n";
+#endif
+		pendingSize = 4096;
+
 	}
 
 	int bytesRead = BIO_read(writeBio, target, pendingSize);
@@ -147,7 +156,7 @@ void getPendingData(BIO* writeBio, uint8_t* target, size_t* pendingBytesWritten)
 	*pendingBytesWritten = bytesRead;
 }
 
-void handleNewClient(const uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, const char* endpoint)
+void handleNewClient(const uint8_t* inputData, size_t inputDataLength, uint8_t pendingSendBuffer[4096], size_t* pendingSendLength, const char* endpoint)
 {
 #ifdef LOGGING
 	std::cout << "endpoint not found, checking for cookie" << "\n";
@@ -221,7 +230,7 @@ void handleNewClient(const uint8_t* inputData, size_t inputDataLength, uint8_t* 
 
 }
 
-void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size_t inputDataLength, uint8_t decryptedDataBuffer[4096], size_t* decryptedDataLength, uint8_t* pendingSendBuffer, size_t* pendingSendLength, const char* endpoint) {
+void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size_t inputDataLength, uint8_t decryptedDataBuffer[4096], size_t* decryptedDataLength, uint8_t pendingSendBuffer[4096], size_t* pendingSendLength, const char* endpoint) {
 
 	int bioWritten = BIO_write(dtlsClient.rMemBio, inputData, inputDataLength);
 #ifdef LOGGING
