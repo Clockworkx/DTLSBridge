@@ -326,6 +326,7 @@ void handleExistingClient(DTLSClient& dtlsClient, const uint8_t* inputData, size
 #ifdef LOGGING
 				std::cout << "Received a client Hello with existing SSL Session, deleting Session, sending hello verify request\n";
 #endif
+				SSL_free(dtlsClient.ssl);
 				clients.erase({ endpoint });
 				return handleNewClient(inputData, inputDataLength, pendingSendBuffer, pendingSendLength, endpoint);
 			}
