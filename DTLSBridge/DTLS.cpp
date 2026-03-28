@@ -1,6 +1,7 @@
 #include "DTLS.h"
 
 #include <cstring>
+#include <ctime>
 #ifdef LOGGING
 #include <iostream>
 #endif
@@ -60,6 +61,7 @@ struct DTLSClient
 	SSL* ssl;
 	BIO* rMemBio;
 	BIO* wMemBio;
+	time_t last_traffic;
 	bool hasExchangedCookie;
 };
 
@@ -80,6 +82,29 @@ void init()
 }
 
 std::unordered_map<std::string, DTLSClient> clients;
+
+void collectGarbage(time_t ts)
+{
+#ifdef LOGGING
+	std::cout << "Running garbage collector" << "\n";
+#endif
+	for (auto it = clients.begin(); it != clients.end(); )
+	{
+		const auto secs_since_last_traffic = ts - it->second.last_traffic;
+		if (secs_since_last_traffic > 120)
+		{
+#ifdef LOGGING
+			std::cout << "Garbage collector dropping client: " << it->first << "\n";
+#endif
+			SSL_free(it->second.ssl);
+			it = clients.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+}
 
 #ifdef LOGGING
 void printError(SSL* ssl, int result)
@@ -214,7 +239,9 @@ void handleNewClient(const uint8_t* inputData, size_t inputDataLength, uint8_t p
 #ifdef LOGGING
 	std::cout << "DTLSv1_listen succeeded, cookie verified" << "\n";
 #endif
-	auto it = clients.emplace(std::string{ endpoint }, DTLSClient{ ssl, rMemBio, wMemBio, true });
+	const auto ts = ::time(nullptr);
+	collectGarbage(ts);
+	auto it = clients.emplace(std::string{ endpoint }, DTLSClient{ ssl, rMemBio, wMemBio, ts, true});
 	DTLSClient& dtlsClient = it.first->second;
 
 	bool isHandshakeFinished = SSL_is_init_finished(dtlsClient.ssl);
@@ -374,8 +401,8 @@ bool ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 	}
 
 	DTLSClient& dtlsClient = client->second;
-
 	handleExistingClient(dtlsClient, inputData, inputDataLength, decryptedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
+	dtlsClient.last_traffic = ::time(nullptr);
 	return true;
 }
 
@@ -408,4 +435,5 @@ void WriteData(const uint8_t* rawData, size_t rawDataLength, uint8_t encryptedDa
 #endif
 
 	getPendingData(dtlsClient.wMemBio, encryptedData, encryptedDataLength);
+	dtlsClient.last_traffic = ::time(nullptr);
 }
