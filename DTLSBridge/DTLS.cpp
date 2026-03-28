@@ -34,21 +34,23 @@ int verify(int ok, X509_STORE_CTX* ctx)
 	return 1;
 }
 
+const unsigned char pskS[] = { 0x4F, 0x74, 0x57, 0x72, 0x4C, 0x66, 0x77, 0x56, 0x6A, 0x6D, 0x59, 0x6D, 0x45, 0x6B };
+
 unsigned int psk_server_callback(SSL* ssl, const char* identity, unsigned char* psk, unsigned int max_psk_len)
 {
-	std::vector<unsigned char> pskS = { 0x4F, 0x74, 0x57, 0x72, 0x4C, 0x66, 0x77, 0x56, 0x6A, 0x6D, 0x59, 0x6D, 0x45, 0x6B };
-
 	if (identity != nullptr)
 	{
 #ifdef LOGGING
 		std::cout << "PSK identity: " << identity << "\n";
 #endif
-	}
 
-	if (strcmp(identity, "c4ad847c") == 0)
-	{
-		memcpy(psk, pskS.data(), pskS.size());
-		return static_cast<unsigned int>(pskS.size());
+		if (strcmp(identity, "c4ad847c") == 0
+			&& sizeof(pskS) <= max_psk_len
+			)
+		{
+			memcpy(psk, pskS, sizeof(pskS));
+			return sizeof(pskS);
+		}
 	}
 	return 0;
 }
