@@ -151,7 +151,7 @@ void getPendingData(BIO* writeBio, uint8_t target[4096], size_t* pendingBytesWri
 	}
 #endif
 
-	xorFilter::xorData(reinterpret_cast<char*>(target), pendingSize, NRS_XOR_MAGIC);
+	xorFilter::xorData(reinterpret_cast<char*>(target), pendingSize);
 
 	*pendingBytesWritten = bytesRead;
 }
@@ -341,7 +341,7 @@ bool ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 
 	if (!consistsOfDTLSRecords(inputData, inputDataLength))
 	{
-		xorFilter::xorData(reinterpret_cast<char*>(inputData), inputDataLength, NRS_XOR_MAGIC);
+		xorFilter::xorData(reinterpret_cast<char*>(inputData), inputDataLength);
 		if (!consistsOfDTLSRecords(inputData, inputDataLength))
 		{
 #ifdef LOGGING
@@ -414,6 +414,6 @@ void WriteData(const uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedD
 	std::cout << "bytes read from write bio: " << bytesRead << "\n";
 #endif
 
-	xorFilter::xorData(reinterpret_cast<char*>(encryptedData), bytesRead, NRS_XOR_MAGIC);
+	xorFilter::xorData(reinterpret_cast<char*>(encryptedData), bytesRead);
 	*encryptedDataLength = pending;
 }
