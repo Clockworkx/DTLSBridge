@@ -146,7 +146,7 @@ void getPendingData(BIO* writeBio, uint8_t target[4096], size_t* pendingBytesWri
 	int bytesRead = BIO_read(writeBio, target, pendingSize);
 
 #ifdef LOGGING
-	std::cout << "ReadData() bytes read from write bio:" << bytesRead << "\n";
+	std::cout << "getPendingData() bytes read from write bio:" << bytesRead << "\n";
 	for (int i = 0; i < bytesRead; i++)
 	{
 		std::cout << std::hex << (int)target[i] << " ";
@@ -371,7 +371,7 @@ bool ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 }
 
 
-void WriteData(const uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedData, size_t* encryptedDataLength, const char* endpoint)
+void WriteData(const uint8_t* rawData, size_t rawDataLength, uint8_t encryptedData[4096], size_t* encryptedDataLength, const char* endpoint)
 {
 
 	auto it = clients.find(std::string{ endpoint });
@@ -398,24 +398,5 @@ void WriteData(const uint8_t* rawData, size_t rawDataLength, uint8_t* encryptedD
 	std::cout << "bytes written in ssl_write: " << bytesWritten << "\n";
 #endif
 
-	int pending = BIO_pending(dtlsClient.wMemBio);
-
-#ifdef LOGGING
-	std::cout << "WriteData() pending bytes after ssl_write: " << pending << "\n";
-#endif
-
-	int bytesRead = BIO_read(dtlsClient.wMemBio, encryptedData, pending);
-
-#ifdef LOGGING
-	if (bytesRead <= 0)
-	{
-		std::cout << "WriteData error reading encrypted bytes after ssl_write" << "\n";
-		printError(dtlsClient.ssl, bytesRead);
-	}
-
-	std::cout << "bytes read from write bio: " << bytesRead << "\n";
-#endif
-
-	xorFilter::xorData(reinterpret_cast<char*>(encryptedData), bytesRead);
-	*encryptedDataLength = pending;
+	getPendingData(dtlsClient.wMemBio, encryptedData, encryptedDataLength);
 }
