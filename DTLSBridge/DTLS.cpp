@@ -226,12 +226,13 @@ void handleNewClient(const uint8_t* inputData, size_t inputDataLength, uint8_t p
 			std::cout << "Fatal Error in DTLSv1_listen" << "\n";
 			printError(ssl, listenRet);
 #endif
-			return;
 		}
-
+		else
+		{
 #ifdef LOGGING
-		std::cout << "DTLSv1_listen returned HelloVerifyRequest" << "\n";
+			std::cout << "DTLSv1_listen returned HelloVerifyRequest" << "\n";
 #endif
+		}
 		getPendingData(wMemBio, pendingSendBuffer, pendingSendLength);
 		SSL_free(ssl);
 		return;
