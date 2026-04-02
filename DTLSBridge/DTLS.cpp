@@ -147,7 +147,7 @@ void getPendingData(BIO* writeBio, uint8_t target[4096], size_t* pendingBytesWri
 {
 	int pendingSize = BIO_pending(writeBio);
 #ifdef LOGGING
-	std::cout << "ReadData() write bio pending size: " << pendingSize << "\n";
+	std::cout << "getPendingData() write bio pending size: " << pendingSize << "\n";
 #endif
 
 	if (pendingSize <= 0)
@@ -184,6 +184,7 @@ void getPendingData(BIO* writeBio, uint8_t target[4096], size_t* pendingBytesWri
 	{
 		std::cout << std::hex << (int)target[i] << " ";
 	}
+	std::cout << "\n";
 #endif
 
 	xorFilter::xorData(reinterpret_cast<char*>(target), bytesRead);
