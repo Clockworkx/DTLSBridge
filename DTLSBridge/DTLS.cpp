@@ -1,4 +1,4 @@
-#include "DTLS.h"
+#include "DTLS.hpp"
 
 #include <cstring>
 #include <ctime>
@@ -13,9 +13,9 @@
 #include <openssl/err.h>
 #include <openssl/bio.h>
 
-#include "DtlsRecord.h"
-#include "Globals.h"
-#include "xorBio.h"
+#include "DtlsRecord.hpp"
+#include "Globals.hpp"
+#include "xorBio.hpp"
 
 int generateCookie(SSL* ssl, unsigned char* cookie, unsigned int* cookie_len)
 {

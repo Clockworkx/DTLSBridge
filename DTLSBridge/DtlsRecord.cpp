@@ -1,4 +1,4 @@
-#include "DtlsRecord.h"
+#include "DtlsRecord.hpp"
 
 #include <algorithm>
 #include <array>

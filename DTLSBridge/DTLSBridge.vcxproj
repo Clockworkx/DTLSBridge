@@ -155,10 +155,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Globals.h" />
-    <ClInclude Include="DTLS.h" />
-    <ClInclude Include="DtlsRecord.h" />
-    <ClInclude Include="xorBio.h" />
+    <ClInclude Include="Globals.hpp" />
+    <ClInclude Include="DTLS.hpp" />
+    <ClInclude Include="DtlsRecord.hpp" />
+    <ClInclude Include="xorBio.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DTLS.cpp" />
