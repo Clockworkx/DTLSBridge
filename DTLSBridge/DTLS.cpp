@@ -106,6 +106,18 @@ void collectGarbage(time_t ts)
 	}
 }
 
+void deinit()
+{
+	for (const auto& e : clients)
+	{
+		SSL_free(e.second.ssl);
+	}
+	clients.clear();
+
+	SSL_CTX_free(Globals::ctx);
+	EVP_cleanup();
+}
+
 #ifdef LOGGING
 void printError(SSL* ssl, int result)
 {
