@@ -415,8 +415,9 @@ bool ReadData(uint8_t* inputData, size_t inputDataLength, uint8_t* pendingSendBu
 	}
 
 	DTLSClient& dtlsClient = client->second;
-	handleExistingClient(dtlsClient, inputData, inputDataLength, decryptedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
 	dtlsClient.last_traffic = ::time(nullptr);
+	handleExistingClient(dtlsClient, inputData, inputDataLength, decryptedDataBuffer, decryptedDataLength, pendingSendBuffer, pendingSendLength, endpoint);
+	// dtlsClient may be free'd now
 	return true;
 }
 
