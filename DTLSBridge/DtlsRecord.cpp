@@ -113,7 +113,7 @@ bool isValidDTLSRecord(uint8_t* packet, size_t packetLength)
 		return false;
 	}
 
-	if ((packet[1] != 0xFE && packet[2] != 0xFF) || packet[1] != 0xFE && packet[2] != 0xFD) { return false; }
+	if ((packet[1] != 0xFE && packet[2] != 0xFF) || (packet[1] != 0xFE && packet[2] != 0xFD)) { return false; }
 	//3 and 4 are epoch
 	//5-10 are sequence number
 
